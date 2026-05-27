@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Social Radar</title>
+    <style>
+        body {
+            background-color: #050f05;
+            color: #00ff00;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            text-align: center;
+        }
+        #radar-circle {
+            width: 250px;
+            height: 250px;
+            border: 3px solid #00ff00;
+            border-radius: 50%;
+            position: relative;
+            margin-bottom: 30px;
+            box-shadow: 0 0 20px #00ff00;
+        }
+        /* Fake radar sweep line */
+        #radar-circle::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 50%;
+            height: 2px;
+            background: #00ff00;
+            transform-origin: left center;
+            animation: sweep 2s linear infinite;
+            display: none;
+        }
+        .scanning #radar-circle::after {
+            display: block;
+        }
+        @keyframes sweep {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        button {
+            background-color: transparent;
+            border: 2px solid #00ff00;
+            color: #00ff00;
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            font-family: inherit;
+            cursor: pointer;
+            box-shadow: 0 0 10px #00ff00;
+            border-radius: 5px;
+        }
+        button:active {
+            background-color: #00ff00;
+            color: #050f05;
+        }
+        #status {
+            margin-top: 20px;
+            font-size: 20px;
+            min-height: 24px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="radar-circle"></div>
+    <button id="scan-btn" onclick="startRadar()">INITIALIZE SCAN</button>
+    <div id="status">SYSTEM IDLE</div>
+
+<script>
+    // 爆笑/荒謬物件的廣東話清單
+    const outrageousItems = [
+        "一個好有攻擊性嘅多士爐",
+	"一隻雙碩士畢業嘅小強",
+    	"一對怨氣重嘅未洗臭襪",
+    	"一個鐘意食日本菜嘅四腳爬爬",
+    	"一粒被煮咗三日都賣唔出嘅咖喱魚蛋",
+    	"一位想同你做街頭問卷嘅松鼠",
+    	"一位叫叉燒飯走叉燒嘅外星人",
+    	"一兜釋放緊高濃度負能量隔夜嘅齋滷味",
+    	"一隻成晚冇瞓嘅貓店長"
+    ];
+
+    let audioCtx = null;
+    let beepInterval = null;
+
+    function playRadarBeep() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        let osc = audioCtx.createOscillator();
+        let gain = audioCtx.createGain();
+        
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+        
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+        
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.4);
+    }
+
+    function startRadar() {
+        const btn = document.getElementById('scan-btn');
+        const statusText = document.getElementById('status');
+        
+        document.body.classList.add('scanning');
+        btn.disabled = true;
+        statusText.innerText = "Scanning..."; // UI 改為中文
+
+        playRadarBeep();
+        beepInterval = setInterval(playRadarBeep, 1000);
+
+        setTimeout(() => {
+            clearInterval(beepInterval);
+            document.body.classList.remove('scanning');
+            
+            // 隨機抽選一個荒謬物件
+            const randomItem = outrageousItems[Math.floor(Math.random() * outrageousItems.length)];
+            
+            // 設定你要的廣東話對白
+            const phraseToSpeak = `探測到異常物件，可能係${randomItem}，或者可疑人類。請提高警覺。切勿與該異常物件進行溝通。`;
+            
+            statusText.innerText = "Target detected";
+            speak(phraseToSpeak, () => {
+                btn.disabled = false;
+                statusText.innerText = "Ready to deploy";
+            });
+        }, 5000);
+    }
+
+    // 廣東話冷酷機械女聲引擎
+    function speak(text, callback) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        
+        // 1. 強制設定為廣東話 (香港)
+        utterance.lang = 'zh-HK'; 
+
+        // 2. 尋找 iPhone 內建的廣東話語音檔
+        const voices = window.speechSynthesis.getVoices();
+        const hkVoice = voices.find(voice => voice.lang === 'zh-HK' || voice.lang.startsWith('zh-HK'));
+        if (hkVoice) {
+            utterance.voice = hkVoice;
+        }
+
+        // 3. 冷酷機械感參數設定
+        utterance.rate = 0.75;   // 語速：0.85 聽起來不慌不忙，非常有 AI 的壓迫感
+        utterance.pitch = 0.7;   // 音調：調低到 0.7 會把原本溫柔的女聲壓成沒有情緒的機械音
+        utterance.volume = 1.0;
+
+        utterance.onend = callback;
+        window.speechSynthesis.speak(utterance);
+    }
+
+    // 確保 iOS Safari 啟動時預先載入廣東話語音引擎
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.getVoices();
+        window.speechSynthesis.onvoiceschanged = () => {
+            window.speechSynthesis.getVoices();
+        };
+    }
+</script>
+<script data-goatcounter="https://socialradar.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js">
+</script>
+</body>
+</html>
