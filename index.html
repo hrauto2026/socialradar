@@ -138,8 +138,8 @@
             document.body.classList.remove('scanning');
             
             const randomItem = outrageousItems[Math.floor(Math.random() * outrageousItems.length)];
-            const phraseToSpeak = `探測到異常物件，可能係${randomItem}或者異常人類，請提高警覺，切勿進行溝通`;
-            
+            //const phraseToSpeak = `探測到異常物件，可能係${randomItem}或者異常人類，請提高警覺，切勿進行溝通`;
+            const phraseToSpeak = `探測到不正常人類，探測到不正常人類，請提高警覺，切勿進行溝通，並且盡快聯絡不正人類研究所`;
             statusText.innerText = "成功鎖定目標。";
             
             speak(phraseToSpeak, () => {
