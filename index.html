@@ -138,7 +138,7 @@
             document.body.classList.remove('scanning');
             
             const randomItem = outrageousItems[Math.floor(Math.random() * outrageousItems.length)];
-            const phraseToSpeak = `探測到異常物件可能係${randomItem}或者人類，請提高警覺，切勿進行溝通`;
+            const phraseToSpeak = `探測到異常物件，可能係${randomItem}或者異常人類，請提高警覺，切勿進行溝通`;
             
             statusText.innerText = "成功鎖定目標。";
             
@@ -167,7 +167,7 @@
 
             // 冷酷機械感參數
             utterance.rate = 0.85;   
-            utterance.pitch = 0.75;  
+            utterance.pitch = 0.65;  
             utterance.volume = 1.0;  
 
             utterance.onend = callback;
