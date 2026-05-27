@@ -76,8 +76,8 @@
 <body>
 
     <div id="radar-circle"></div>
-    <button id="scan-btn" onclick="startRadar()">啟動防禦雷達</button>
-    <div id="status">系統閒置</div>
+    <button id="scan-btn" onclick="startRadar()">啟動探測器</button>
+    <div id="status">系統閒置中</div>
 
 <script>
     // 嚴格 12 字廣東話清單
@@ -144,7 +144,7 @@
             
             speak(phraseToSpeak, () => {
                 btn.disabled = false;
-                statusText.innerText = "系統閒置";
+                statusText.innerText = "系統閒置中";
             });
         }, 5000);
     }
@@ -175,7 +175,7 @@
             // 如果遇到不可預期的錯誤，強制釋放按鈕
             utterance.onerror = () => {
                 btn.disabled = false;
-                document.getElementById('status').innerText = "系統閒置";
+                document.getElementById('status').innerText = "系統閒置中";
             };
 
             window.speechSynthesis.speak(utterance);
