@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-HK">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -10,7 +10,7 @@
         body {
             background-color: #050f05;
             color: #00ff00;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Courier New', Courier, monospace;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -19,8 +19,6 @@
             margin: 0;
             overflow: hidden;
             text-align: center;
-            -webkit-user-select: none;
-            user-select: none;
         }
         #radar-circle {
             width: 250px;
@@ -31,6 +29,7 @@
             margin-bottom: 30px;
             box-shadow: 0 0 20px #00ff00;
         }
+        /* Fake radar sweep line */
         #radar-circle::after {
             content: '';
             position: absolute;
@@ -70,134 +69,104 @@
             margin-top: 20px;
             font-size: 20px;
             min-height: 24px;
-            letter-spacing: 2px;
         }
     </style>
 </head>
 <body>
 
     <div id="radar-circle"></div>
-    <button id="scan-btn" onclick="startRadar()">啟動防禦雷達</button>
-    <div id="status">系統閒置</div>
+    <button id="scan-btn" onclick="startRadar()">INITIALIZE SCAN</button>
+    <div id="status">SYSTEM IDLE</div>
 
-    <script>
-        // 15句嚴格12字廣東話
-        const outrageousItems = [
-        "一個好有攻擊性嘅多士爐",
-	"一隻雙碩士畢業嘅小強",
-    	"一對怨氣重嘅未洗臭襪",
-    	"一個鐘意食日本菜嘅四腳爬爬",
-    	"一粒被煮咗三日都賣唔出嘅咖喱魚蛋",
-    	"一位想同你做街頭問卷嘅松鼠",
-    	"一位叫叉燒飯走叉燒嘅外星人",
-    	"一兜釋放緊高濃度負能量隔夜嘅齋滷味",
-    	"一隻成晚冇瞓嘅貓店長"
-        ];
+<script>
+    // Array of outrageous items
+    const outrageousItems = [
+        "a highly aggressive sentient toaster",
+        "a wild raccoon wielding a clipboard",
+        "an unauthorized pile of laundry",
+        "a localized low-patience field",
+        "a cardboard cutout of Nicolas Cage",
+        "a suspicious hovering cabbage"
+    ];
 
-        let audioCtx = null;
-        let beepInterval = null;
+    let audioCtx = null;
+    let beepInterval = null;
 
-        // 預載音訊引擎
-        function initAudio() {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-            // 觸發 iOS 語音引擎解鎖
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.getVoices();
-            }
+    function playRadarBeep() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        let osc = audioCtx.createOscillator();
+        let gain = audioCtx.createGain();
+        
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+        
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+        
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.4);
+    }
+
+    function startRadar() {
+        const btn = document.getElementById('scan-btn');
+        const statusText = document.getElementById('status');
+        
+        document.body.classList.add('scanning');
+        btn.disabled = true;
+        statusText.innerText = "SCANNING ENVIRONMENT...";
+
+        playRadarBeep();
+        beepInterval = setInterval(playRadarBeep, 1000);
+
+        setTimeout(() => {
+            clearInterval(beepInterval);
+            document.body.classList.remove('scanning');
+            
+            const randomItem = outrageousItems[Math.floor(Math.random() * outrageousItems.length)];
+            const phraseToSpeak = `External object detected. Probably ${randomItem}... or a human.  Use caution.  Avoid contact.`;
+            
+            statusText.innerText = "TARGET IDENTIFIED.";
+            speak(phraseToSpeak, () => {
+                btn.disabled = false;
+                statusText.innerText = "READY TO DEPOLY";
+            });
+        }, 5000);
+    }
+
+    // UPDATED ENGINE FOR BRITISH ROBOT VOICE
+    function speak(text, callback) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        
+        // 1. Force the language profile to British English
+        utterance.lang = 'en-GB'; 
+
+        // 2. Scan your iPhone specifically for an English-UK voice profile
+        const voices = window.speechSynthesis.getVoices();
+        const ukVoice = voices.find(voice => voice.lang === 'en-GB' || voice.lang.startsWith('en-GB'));
+        if (ukVoice) {
+            utterance.voice = ukVoice;
         }
 
-        function playRadarBeep() {
-            initAudio();
-            let osc = audioCtx.createOscillator();
-            let gain = audioCtx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.4);
-        }
+        // 3. ROBOTIC AUDIO SETTINGS (Tweak these variables to experiment!)
+        utterance.rate = 0.82;   // Speed: Lower than 1.0 makes it slow, calculated, and eerie
+        utterance.pitch = 0.65;  // Pitch: Dropping this creates a heavy, metallic monotone depth
+        utterance.volume = 1.0;  // Volume: Max output
 
-        function startRadar() {
-            // 使用者點擊時，立刻解鎖音訊
-            initAudio();
+        utterance.onend = callback;
+        window.speechSynthesis.speak(utterance);
+    }
 
-            const btn = document.getElementById('scan-btn');
-            const statusText = document.getElementById('status');
-            
-            document.body.classList.add('scanning');
-            btn.disabled = true;
-            statusText.innerText = "正在掃描周邊環境...";
-
-            playRadarBeep();
-            beepInterval = setInterval(playRadarBeep, 1000);
-
-            setTimeout(() => {
-                clearInterval(beepInterval);
-                document.body.classList.remove('scanning');
-                
-                const randomItem = outrageousItems[Math.floor(Math.random() * outrageousItems.length)];
-                const phraseToSpeak = `探測到異常物件，可能係${randomItem}，或者人類。請提高警覺。請勿進行溝通。`;
-                
-                statusText.innerText = "成功鎖定目標。";
-                
-                // 執行說話
-                speak(phraseToSpeak, () => {
-                    btn.disabled = false;
-                    statusText.innerText = "系統閒置";
-                });
-            }, 5000);
-        }
-
-        function speak(text, callback) {
-            // 如果前一個語音還在播，先強制停止
-            if (window.speechSynthesis.speaking) {
-                window.speechSynthesis.cancel();
-            }
-
-            const utterance = new SpeechSynthesisUtterance(text);
-            
-            // 強制設定語言與地區代碼
-            utterance.lang = 'zh-HK'; 
-
-            // iOS 關鍵修正：重新獲取當前裝置支援的語音清單
-            const voices = window.speechSynthesis.getVoices();
-            
-            // 優先尋找香港廣東話（如 Sin-Ji），找不到就找任何 zh- 開頭的廣東話
-            const hkVoice = voices.find(voice => voice.lang === 'zh-HK' || voice.lang.includes('HK') || voice.lang.startsWith('zh-M'));
-            
-            if (hkVoice) {
-                utterance.voice = hkVoice;
-            }
-
-            // 參數微調（適合廣東話機械音）
-            utterance.rate = 0.9;   
-            utterance.pitch = 0.6;  
-            utterance.volume = 1.0;
-
-            utterance.onend = callback;
-            
-            // 如果遇到 iOS 語音卡死，3秒後自動解除按鈕鎖定
-            utterance.onerror = () => {
-                console.log("Speech Error");
-                callback();
-            };
-
-            window.speechSynthesis.speak(utterance);
-        }
-
-        // 確保 iOS 在頁面載入和切換時都去刷語音清單
-        if ('speechSynthesis' in window) {
+    // Crucial fix for iOS Safari: Pre-loading the voice engine on launch
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.getVoices();
+        window.speechSynthesis.onvoiceschanged = () => {
             window.speechSynthesis.getVoices();
-            window.speechSynthesis.onvoiceschanged = () => {
-                window.speechSynthesis.getVoices();
-            };
-        }
-    </script>
+        };
+    }
 </script>
 <script data-goatcounter="https://socialradar.goatcounter.com/count"
         async src="//gc.zgo.at/count.js">
