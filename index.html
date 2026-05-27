@@ -135,14 +135,14 @@
             border-bottom: 1px dashed #00ff00;
             padding-bottom: 5px;
         }
-        .radio-container {
+        .radio-container, .setting-row {
             display: block;
             margin-bottom: 12px;
             cursor: pointer;
             line-height: 1.4;
             font-size: 16px;
         }
-        .radio-container input {
+        .radio-container input[type="radio"] {
             margin-right: 10px;
             accent-color: #00ff00;
         }
@@ -161,6 +161,28 @@
             outline: none;
             box-shadow: 0 0 8px #00ff00;
         }
+        
+        /* 調整滑桿樣式 */
+        .setting-row {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .slider-container input[type="range"] {
+            flex: 1;
+            accent-color: #00ff00;
+        }
+        .slider-value {
+            min-width: 35px;
+            text-align: right;
+            color: #adff2f;
+        }
+
         .modal-close-btn {
             display: block;
             width: 100%;
@@ -218,6 +240,32 @@
                 英國口音(英文字only)
             </label>
 
+            <h4>3. 掃描音效設定</h4>
+            <label class="radio-container">
+                <input type="radio" name="beep-toggle" value="on" checked>
+                開啟掃描 Beep 聲 (掃描 5 秒)
+            </label>
+            <label class="radio-container">
+                <input type="radio" name="beep-toggle" value="off">
+                關閉掃描 Beep 聲 (即時廣播)
+            </label>
+
+            <h4>4. 語音進階設定</h4>
+            <div class="setting-row">
+                <label>音調 (Pitch):</label>
+                <div class="slider-container">
+                    <input type="range" id="pitch-slider" min="0.5" max="2" step="0.05" value="0.55" oninput="updateSliderValue('pitch', this.value)">
+                    <span id="pitch-val" class="slider-value">0.55</span>
+                </div>
+            </div>
+            <div class="setting-row">
+                <label>速度 (Rate):</label>
+                <div class="slider-container">
+                    <input type="range" id="rate-slider" min="0.5" max="2" step="0.05" value="0.85" oninput="updateSliderValue('rate', this.value)">
+                    <span id="rate-val" class="slider-value">0.85</span>
+                </div>
+            </div>
+
             <button class="modal-close-btn" onclick="closeSettings()">儲存並關閉</button>
         </div>
     </div>
@@ -250,6 +298,9 @@
     function selectCustomRadio() {
         document.getElementById('custom-radio').checked = true;
     }
+    function updateSliderValue(type, val) {
+        document.getElementById(type + '-val').innerText = val;
+    }
 
     function playRadarBeep() {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -270,15 +321,45 @@
         osc.stop(audioCtx.currentTime + 0.4);
     }
 
+    // 核心廣播觸發邏輯（獨立出來方便「5秒後觸發」或「即時觸發」）
+    function executeBroadcast() {
+        const btn = document.getElementById('scan-btn');
+        const statusText = document.getElementById('status');
+        
+        document.body.classList.remove('scanning');
+        
+        // 進入朗讀階段，隱藏「啟動探測器」按鈕
+        btn.style.display = 'none';
+        
+        let selectedValue = document.querySelector('input[name="phrase"]:checked').value;
+        let phraseToSpeak = "";
+        
+        if (selectedValue === "custom") {
+            phraseToSpeak = document.getElementById('custom-text').value.trim();
+            if (!phraseToSpeak) phraseToSpeak = "你冇輸入任何自訂語句";
+        } else {
+            phraseToSpeak = phrases[parseInt(selectedValue)];
+        }
+        
+        statusText.innerText = "成功鎖定目標，正在廣播...";
+        
+        speak(phraseToSpeak, () => {
+            // 朗讀完畢恢復初始狀態
+            btn.disabled = false;
+            btn.style.display = 'inline-block';
+            document.getElementById('stop-btn').style.display = 'none';
+            statusText.innerText = "系統閒置中";
+        });
+    }
+
     function startRadar() {
         const btn = document.getElementById('scan-btn');
         const stopBtn = document.getElementById('stop-btn');
         const statusText = document.getElementById('status');
+        const beepSetting = document.querySelector('input[name="beep-toggle"]:checked').value;
         
-        document.body.classList.add('scanning');
         btn.disabled = true;
         stopBtn.style.display = 'inline-block';
-        statusText.innerText = "正在掃描周邊環境...";
 
         if ('speechSynthesis' in window) {
             let unlockUtterance = new SpeechSynthesisUtterance('');
@@ -286,31 +367,22 @@
             window.speechSynthesis.speak(unlockUtterance);
         }
 
-        playRadarBeep();
-        beepInterval = setInterval(playRadarBeep, 1000);
+        // 判斷是否需要 5 秒掃描與 Beep 聲
+        if (beepSetting === 'on') {
+            document.body.classList.add('scanning');
+            statusText.innerText = "正在掃描周邊環境...";
+            
+            playRadarBeep();
+            beepInterval = setInterval(playRadarBeep, 1000);
 
-        scanTimeout = setTimeout(() => {
-            clearInterval(beepInterval);
-            document.body.classList.remove('scanning');
-            
-            let selectedValue = document.querySelector('input[name="phrase"]:checked').value;
-            let phraseToSpeak = "";
-            
-            if (selectedValue === "custom") {
-                phraseToSpeak = document.getElementById('custom-text').value.trim();
-                if (!phraseToSpeak) phraseToSpeak = "你冇輸入任何自訂語句";
-            } else {
-                phraseToSpeak = phrases[parseInt(selectedValue)];
-            }
-            
-            statusText.innerText = "成功鎖定目標，正在廣播...";
-            
-            speak(phraseToSpeak, () => {
-                btn.disabled = false;
-                stopBtn.style.display = 'none';
-                statusText.innerText = "系統閒置中";
-            });
-        }, 5000);
+            scanTimeout = setTimeout(() => {
+                clearInterval(beepInterval);
+                executeBroadcast();
+            }, 5000);
+        } else {
+            // 關閉 Beep 聲時：跳過等待，即時執行廣播
+            executeBroadcast();
+        }
     }
 
     function stopRadar() {
@@ -322,7 +394,11 @@
         }
         
         document.body.classList.remove('scanning');
-        document.getElementById('scan-btn').disabled = false;
+        
+        const btn = document.getElementById('scan-btn');
+        btn.disabled = false;
+        btn.style.display = 'inline-block'; // 確保停止時「啟動探測器」按鈕重新顯示
+        
         document.getElementById('stop-btn').style.display = 'none';
         document.getElementById('status').innerText = "系統已安全終止。";
         
@@ -341,10 +417,13 @@
             const voices = window.speechSynthesis.getVoices();
             const selectedStyle = document.querySelector('input[name="voice-style"]:checked').value;
 
+            // 讀取 UI Slider 的設定值
+            const userPitch = parseFloat(document.getElementById('pitch-slider').value);
+            const userRate = parseFloat(document.getElementById('rate-slider').value);
+
             if (selectedStyle === 'male-uk') {
                 utterance.lang = 'en-GB'; 
                 
-                // 【男聲音質優化】層次式尋找最渾厚的英國男聲
                 let ukVoice = voices.find(v => v.lang.includes('GB') && 
                     (v.name.toLowerCase().includes('male') || 
                      v.name.toLowerCase().includes('daniel') || 
@@ -353,28 +432,27 @@
                      v.name.toLowerCase().includes('premium'))
                 );
                 
-                // 如果找不到指定名稱，就拿任何一個英國語音
                 if (!ukVoice) ukVoice = voices.find(v => v.lang.includes('GB') || v.lang.startsWith('en-G'));
                 if (ukVoice) utterance.voice = ukVoice;
                 
-                // 【核心厚實度調整】
-                utterance.pitch = 0.55;  // 音調明顯降低，營造出成熟低沉、厚實的胸腔共鳴感
-                utterance.rate = 0.80;   // 速度放慢，顯得更沉穩有磁性
+                utterance.pitch = userPitch;  
+                utterance.rate = userRate;   
             } else {
-                // 女聲機械人保持原本設定
                 utterance.lang = 'zh-HK'; 
                 let hkVoice = voices.find(voice => voice.lang === 'zh-HK' || voice.lang.includes('HK') || voice.lang.includes('zh-M'));
                 if (hkVoice) utterance.voice = hkVoice;
 
-                utterance.rate = 0.85;   
-                utterance.pitch = 0.55;  
+                utterance.pitch = userPitch;   
+                utterance.rate = userRate;   
             }
 
             utterance.volume = 1.0;  
             utterance.onend = callback;
             
             utterance.onerror = () => {
-                document.getElementById('scan-btn').disabled = false;
+                const btn = document.getElementById('scan-btn');
+                btn.disabled = false;
+                btn.style.display = 'inline-block';
                 document.getElementById('stop-btn').style.display = 'none';
                 document.getElementById('status').innerText = "系統閒置中";
             };
